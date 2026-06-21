@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wikipedia Race</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0c16;
+      --bg-2: #151320;
+      --bg-3: #1c1a28;
+      --surface: #181424;
+      --ink: #ecdee8;
+      --ink-2: #c4b8cc;
+      --muted: #7a7088;
+      --muted-2: #564d62;
+      --rule: #2c2438;
+      --accent: #eeaaaa;
+      --accent-2: #c48888;
+      --accent-soft: rgba(238,170,170,0.12);
+      --secondary: #aaccee;
+      --secondary-soft: rgba(170,204,238,0.12);
+      --gold: #c2944a;
+      --pop: #e85d5d;
+      --r-sm: 6px;
+      --r: 10px;
+      --r-lg: 14px;
+      --f: 'DM Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--f);
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: flex; }
+
+    #lobby {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 28px;
+      padding: 24px;
+    }
+    .logo { font-size: 42px; font-weight: 500; letter-spacing: -1px; }
+    .logo-sub {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: -16px;
+    }
+    .lobby-card {
+      background: color-mix(in srgb, var(--surface) 60%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+      backdrop-filter: blur(22px) saturate(140%);
+      -webkit-backdrop-filter: blur(22px) saturate(140%);
+      box-shadow: inset 0 1px 0 0 color-mix(in srgb, var(--ink-2) 18%, transparent),
+                  0 2px 14px -8px rgba(0,0,0,0.18);
+      border-radius: var(--r-lg);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .lobby-card h2 {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      background: color-mix(in srgb, var(--bg) 80%, transparent);
+      border: 1px solid var(--rule);
+      border-radius: var(--r);
+      color: var(--ink);
+      font-size: 13px;
+      font-family: var(--f);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted-2); }
+    .code-input {
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      font-weight: 500;
+      text-align: center;
+      max-width: 160px;
+    }
+    .input-row { display: flex; gap: 8px; }
+    .divider {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted-2);
+      margin: 20px 0;
+      position: relative;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 38%;
+      height: 1px;
+      background: var(--rule);
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+    .error-msg { color: var(--pop); font-size: 11px; margin-top: 8px; }
+
+    button {
+      padding: 11px 22px;
+      border: none;
+      border-radius: var(--r);
+      font-family: var(--f);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary { background: var(--ink); color: var(--surface); }
+    .btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: color-mix(in srgb, var(--surface) 40%, transparent);
+      color: var(--ink);
+      border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .mode-selector { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 8px; }
+    .mode-btn {
+      flex: 1 1 calc(25% - 6px);
+      min-width: 90px;
+      padding: 10px 6px;
+      background: color-mix(in srgb, var(--surface) 50%, transparent);
+      border: 1px solid var(--rule);
+      border-radius: var(--r);
+      color: var(--muted);
+      font-family: var(--f);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .mode-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .mode-btn:hover:not(.active) { border-color: var(--ink-2); color: var(--ink-2); }
+    .mode-desc { font-size: 11px; color: var(--muted); text-align: center; min-height: 32px; line-height: 1.5; }
+
+    #waiting {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 24px;
+      padding: 24px;
+    }
+    .room-code-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    .room-code-display { font-size: 64px; font-weight: 500; letter-spacing: 16px; color: var(--accent); }
+    .waiting-hint { font-size: 12px; color: var(--muted); }
+    .waiting-mode {
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--accent-2); background: var(--accent-soft); padding: 6px 14px; border-radius: var(--r-sm);
+    }
+    .players-list { display: flex; gap: 20px; }
+    .player-card {
+      background: color-mix(in srgb, var(--surface) 50%, transparent);
+      border: 1px solid var(--rule); border-radius: var(--r);
+      padding: 20px 36px; text-align: center; min-width: 160px; backdrop-filter: blur(12px);
+    }
+    .player-card.ready { border-color: var(--accent); }
+    .player-card .name { font-weight: 500; font-size: 14px; margin-bottom: 6px; }
+    .player-card .status { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+    .player-card.ready .status { color: var(--accent); }
+
+    #game { flex-direction: column; height: 100vh; }
+    .game-hud {
+      background: color-mix(in srgb, var(--surface) 80%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--rule);
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+    }
+    .hud-section { display: flex; flex-direction: column; gap: 2px; }
+    .hud-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .hud-value { font-size: 13px; font-weight: 500; }
+    .hud-target { flex: 1; text-align: center; }
+    .hud-target .hud-value { font-size: 18px; font-weight: 500; color: var(--accent); }
+    .hud-target-desc {
+      font-size: 10px; color: var(--muted); margin: 2px auto 0;
+      max-width: 400px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hud-divider { width: 1px; height: 32px; background: var(--rule); }
+    .hud-timer { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 500; color: var(--secondary); min-width: 60px; text-align: center; }
+    .player-hud { min-width: 140px; }
+    .player-hud.you .hud-value { color: var(--secondary); }
+    .player-hud.opponent .hud-value { color: var(--accent); }
+    .player-hud.fog .hud-value { color: var(--muted-2); }
+    .click-count {
+      display: inline-block; background: color-mix(in srgb, var(--ink) 10%, transparent);
+      padding: 2px 8px; border-radius: var(--r-sm); font-size: 11px; margin-left: 6px;
+    }
+
+    .game-body { flex: 1; display: flex; flex-direction: row; overflow: hidden; }
+    .article-center { flex: 1; display: flex; justify-content: center; overflow: hidden; }
+
+    .path-sidebar {
+      width: 220px; min-width: 220px;
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-right: 1px solid var(--rule);
+      display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+    }
+    .path-sidebar-header {
+      padding: 14px 16px 10px; font-size: 9px; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule);
+    }
+    .path-sidebar-scroll { flex: 1; overflow-y: auto; padding: 16px 16px 24px; }
+    .path-sidebar-scroll::-webkit-scrollbar { width: 3px; }
+    .path-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+    .path-sidebar-scroll::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 2px; }
+    .ball-stick-list { list-style: none; }
+    .bs-node { display: flex; align-items: flex-start; gap: 10px; }
+    .bs-spine { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 16px; }
+    .bs-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2);
+      flex-shrink: 0; z-index: 1; transition: all 0.25s cubic-bezier(.34,1.56,.4,1);
+    }
+    .bs-stick { width: 1.5px; height: 22px; background: var(--rule); flex-shrink: 0; }
+    .bs-node.start .bs-dot { background: var(--secondary); width: 10px; height: 10px; }
+    .bs-node.current .bs-dot {
+      background: var(--accent); width: 10px; height: 10px;
+      box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
+    }
+    .bs-node.target .bs-dot {
+      background: var(--gold); width: 10px; height: 10px;
+      box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 40%, transparent);
+    }
+    .bs-label { font-size: 11px; color: var(--muted); line-height: 1.3; word-break: break-word; }
+    .bs-node.start .bs-label { color: var(--secondary); font-weight: 500; }
+    .bs-node.current .bs-label { color: var(--ink); font-weight: 500; }
+    .bs-node.target .bs-label { color: var(--gold); font-weight: 500; }
+    .bs-click-num { font-size: 9px; color: var(--muted-2); margin-left: 4px; }
+
+    .article-main {
+      display: flex; flex-direction: column; overflow: hidden;
+      min-width: 0; max-width: 960px; width: 100%;
+    }
+    .article-header {
+      display: flex; align-items: center; gap: 12px; padding: 12px 32px;
+      background: var(--bg-2); border-bottom: 1px solid var(--rule); flex-shrink: 0;
+    }
+    .article-title { font-size: 16px; font-weight: 500; flex: 1; }
+    .opp-label { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+    .article-content {
+      flex: 1; overflow-y: auto; padding: 20px 40px 40px;
+      background: #ffffff; color: #202122;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Lato', Helvetica, Arial, sans-serif;
+      font-size: 14px; line-height: 1.6;
+    }
+    .article-content a { color: #0645ad; text-decoration: none; cursor: pointer; }
+    .article-content a:hover { text-decoration: underline; }
+    .article-content a.blocked-link { color: #a2a9b1 !important; pointer-events: none; text-decoration: line-through; }
+    .article-content h1, .article-content h2, .article-content h3, .article-content h4 {
+      font-family: 'Linux Libertine', 'Georgia', 'Times', serif;
+      color: #000; font-weight: normal; border-bottom: 1px solid #a2a9b1;
+    }
+    .article-content h1 { font-size: 28px; margin: 24px 0 8px; padding-bottom: 4px; }
+    .article-content h2 { font-size: 22px; margin: 24px 0 8px; padding-bottom: 2px; }
+    .article-content h3 { font-size: 17px; margin: 16px 0 6px; border: none; }
+    .article-content h4 { font-size: 14px; margin: 12px 0 4px; border: none; font-weight: bold; }
+    .article-content p { margin: 0.5em 0; }
+    .article-content ul, .article-content ol { margin: 0.3em 0 0.3em 1.6em; }
+    .article-content li { margin: 0.2em 0; }
+    .article-content table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    .article-content table td, .article-content table th { border: 1px solid #a2a9b1; padding: 4px 8px; }
+    .article-content table th { background: #eaecf0; font-weight: bold; text-align: center; }
+    .article-content img { max-width: 100%; height: auto; }
+    .article-content figure, .article-content .thumb {
+      max-width: 300px; margin: 8px 0 8px 14px; float: right; clear: right;
+      border: 1px solid #c8ccd1; background: #f8f9fa; padding: 3px;
+    }
+    .article-content figure img, .article-content .thumb img { max-width: 100%; }
+    .article-content figcaption, .article-content .thumbcaption { font-size: 12px; color: #54595d; padding: 4px; line-height: 1.4; }
+    .article-content .infobox {
+      float: right; clear: right; max-width: 320px; margin: 4px 0 8px 14px;
+      border: 1px solid #a2a9b1; border-collapse: collapse; font-size: 13px; background: #f8f9fa;
+    }
+    .article-content .infobox td, .article-content .infobox th { padding: 4px 8px; border: 1px solid #a2a9b1; }
+    .article-content .infobox th { background: #e0e0e0; font-weight: bold; }
+    .article-content .infobox img { max-width: 260px; }
+    .article-content .mw-ref, .article-content .reference, .article-content sup { display: none; }
+    .article-content .navbox, .article-content .metadata, .article-content .ambox,
+    .article-content .mw-empty-elt, .article-content .noprint, .article-content .mbox-small,
+    .article-content .portal, .article-content .authority-control, .article-content .catlinks { display: none; }
+    .article-content blockquote { border-left: 3px solid #c8ccd1; margin: 8px 0; padding: 4px 16px; color: #54595d; }
+    .article-content code, .article-content pre { background: #f8f9fa; padding: 1px 4px; font-size: 13px; }
+
+    .wiki-toc {
+      background: #f8f9fa; border: 1px solid #a2a9b1; padding: 12px 16px;
+      margin: 0 0 16px 0; display: inline-block; min-width: 200px; max-width: 100%;
+      font-size: 13px; line-height: 1.6;
+    }
+    .wiki-toc-title {
+      font-weight: bold; text-align: center; margin-bottom: 6px;
+      font-size: 13px; color: #202122; cursor: pointer; user-select: none;
+    }
+    .wiki-toc-title::after { content: ' [hide]'; font-weight: normal; font-size: 12px; color: #0645ad; }
+    .wiki-toc.collapsed .wiki-toc-title::after { content: ' [show]'; }
+    .wiki-toc.collapsed .wiki-toc-list { display: none; }
+    .wiki-toc-list { list-style: none; padding: 0; margin: 0; }
+    .wiki-toc-list li { padding: 1px 0; }
+    .wiki-toc-list li a { color: #0645ad; text-decoration: none; font-size: 13px; cursor: pointer; }
+    .wiki-toc-list li a:hover { text-decoration: underline; }
+    .wiki-toc-list .toc-h3 { padding-left: 16px; }
+    .wiki-toc-list .toc-h4 { padding-left: 32px; }
+
+    .loading-article {
+      display: flex; align-items: center; justify-content: center; height: 100%;
+      font-family: var(--f); color: var(--muted); font-size: 13px; background: #fff;
+    }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--rule); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .dead-end-bar {
+      background: #fff3cd; color: #856404; border-bottom: 1px solid #ffc107;
+      padding: 8px 16px; font-family: var(--f); font-size: 11px;
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .dead-end-bar button { background: #856404; color: #fff; padding: 4px 12px; font-size: 10px; border-radius: var(--r-sm); }
+
+    .modifier-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.55); z-index: 99;
+      opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .modifier-backdrop.visible { opacity: 1; }
+    .modifier-overlay {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.85);
+      background: rgba(14,12,22,0.88); backdrop-filter: blur(20px);
+      border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+      border-radius: var(--r-lg); padding: 36px 56px; text-align: center;
+      z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.4s, transform 0.4s cubic-bezier(.34,1.56,.4,1);
+    }
+    .modifier-overlay.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .modifier-overlay .mod-name {
+      font-size: 28px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+    }
+    .modifier-overlay .mod-desc { font-size: 14px; color: var(--muted); max-width: 320px; }
+
+    .reconnect-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(232, 93, 93, 0.9); color: #fff; text-align: center;
+      padding: 10px; font-size: 12px; z-index: 200; display: none;
+    }
+    .reconnect-banner.visible { display: block; }
+
+    #results {
+      flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; gap: 20px; padding: 24px; overflow-y: auto;
+    }
+    .results-title { font-size: 36px; font-weight: 500; }
+    .results-title.won { color: var(--accent); }
+    .results-title.lost { color: var(--muted); }
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 660px; }
+    .result-card {
+      background: color-mix(in srgb, var(--surface) 50%, transparent);
+      border: 1px solid var(--rule); border-radius: var(--r); padding: 20px; backdrop-filter: blur(12px);
+    }
+    .result-card.winner { border-color: var(--accent); }
+    .result-card h3 { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 14px; color: var(--muted); }
+    .result-card.winner h3 { color: var(--accent); }
+    .score-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+    .score-row .label { color: var(--muted); }
+    .score-row .value { font-weight: 500; font-size: 12px; }
+    .score-total { border-top: 1px solid var(--rule); margin-top: 8px; padding-top: 8px; font-size: 15px; font-weight: 500; }
+    .score-total .value { font-size: 14px; color: var(--accent); }
+    .match-scores { text-align: center; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .match-scores span { font-size: 22px; color: var(--ink); font-weight: 500; }
+
+    .badges-section { width: 100%; max-width: 660px; }
+    .badges-section h3 { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; text-align: center; }
+    .badges-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .badge {
+      background: color-mix(in srgb, var(--gold) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+      border-radius: var(--r); padding: 8px 14px; text-align: center;
+      animation: badgePop 0.4s cubic-bezier(.34,1.56,.4,1) both;
+    }
+    .badge .badge-name { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 2px; }
+    .badge .badge-desc { font-size: 11px; color: var(--muted); }
+    .badge .badge-player { font-size: 10px; color: var(--muted-2); margin-top: 2px; }
+    @keyframes badgePop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+
+    .history-section {
+      background: color-mix(in srgb, var(--surface) 40%, transparent);
+      border: 1px solid var(--rule); border-radius: var(--r); padding: 20px;
+      width: 100%; max-width: 660px; backdrop-filter: blur(8px);
+    }
+    .history-section h3 { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .history-path { font-size: 11px; color: var(--muted); line-height: 1.8; word-break: break-word; }
+    .history-path .arrow { color: var(--muted-2); margin: 0 4px; }
+    .history-path .target-hit { color: var(--accent); font-weight: 500; }
+    .btn-row { display: flex; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="reconnect-banner" id="reconnectBanner">Connection lost — attempting to reconnect...</div>
+<div class="modifier-backdrop" id="modBackdrop"></div>
+<div class="modifier-overlay" id="modOverlay">
+  <div class="mod-name" id="modName"></div>
+  <div class="mod-desc" id="modDesc"></div>
+</div>
+
+<div id="lobby" class="screen active">
+  <div class="logo">Wikipedia Race</div>
+  <div class="logo-sub">Navigate the encyclopedia</div>
+  <div class="lobby-card">
+    <h2>Player Name</h2>
+    <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+    <div class="divider">then</div>
+    <h2>Create a Game</h2>
+    <div class="mode-selector">
+      <div class="mode-btn active" data-mode="classic">Classic</div>
+      <div class="mode-btn" data-mode="fog-of-war">Fog of War</div>
+      <div class="mode-btn" data-mode="no-highways">No Highways</div>
+      <div class="mode-btn" data-mode="blackout">Blackout</div>
+      <div class="mode-btn" data-mode="double-stakes">2x Stakes</div>
+      <div class="mode-btn" data-mode="roulette">Roulette</div>
+      <div class="mode-btn" data-mode="random-modifiers">Random Mods</div>
+    </div>
+    <div class="mode-desc" id="modeDesc">Race to the target article. Pure skill.</div>
+    <button class="btn-primary" style="width:100%;margin-top:12px" id="btnCreate">Create Room</button>
+    <div class="divider">or join</div>
+    <h2>Room Code</h2>
+    <div class="input-row">
+      <input type="text" id="roomCodeInput" class="code-input" placeholder="CODE" maxlength="4">
+      <button class="btn-primary" id="btnJoin">Join</button>
+    </div>
+    <div class="error-msg" id="lobbyError"></div>
+  </div>
+</div>
+
+<div id="waiting" class="screen">
+  <div class="room-code-label">Room Code</div>
+  <div class="room-code-display" id="roomCodeDisplay"></div>
+  <div class="waiting-hint">Share this code with your opponent</div>
+  <div class="waiting-mode" id="waitingMode">CLASSIC</div>
+  <div class="players-list" id="playersList"></div>
+  <button class="btn-primary" id="btnReady" disabled>Waiting for opponent...</button>
+</div>
+
+<div id="game" class="screen">
+  <div class="game-hud">
+    <div class="hud-section player-hud you">
+      <div class="hud-label">You</div>
+      <div class="hud-value"><span id="hudYouName">-</span><span class="click-count" id="hudYouClicks">0</span></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-section hud-target">
+      <div class="hud-label">Target</div>
+      <div class="hud-value" id="hudTarget">-</div>
+      <div class="hud-target-desc" id="hudTargetDesc"></div>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-timer" id="hudTimer">0:00</div>
+    <div class="hud-divider"></div>
+    <div class="hud-section player-hud opponent" id="oppHud">
+      <div class="hud-label">Opponent</div>
+      <div class="hud-value"><span id="hudOppName">-</span><span class="click-count" id="hudOppClicks">0</span></div>
+    </div>
+  </div>
+  <div class="game-body">
+    <div class="path-sidebar">
+      <div class="path-sidebar-header">Your Path</div>
+      <div class="path-sidebar-scroll" id="pathSidebarScroll">
+        <ul class="ball-stick-list" id="ballStickList"></ul>
+      </div>
+    </div>
+    <div class="article-center">
+      <div class="article-main">
+        <div class="article-header">
+          <div class="article-title" id="articleTitle">Loading...</div>
+          <div class="opp-label" id="oppCurrentLabel"></div>
+        </div>
+        <div id="deadEndBar" class="dead-end-bar" style="display:none">
+          This article has very few links. You may be stuck.
+          <button id="deadEndBack">Go back</button>
+        </div>
+        <div class="article-content" id="articleContent">
+          <div class="loading-article"><div class="spinner"></div>Loading article...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="results" class="screen">
+  <div class="results-title" id="resultsTitle"></div>
+  <div class="match-scores" id="matchScoresDisplay"></div>
+  <div class="results-grid" id="resultsGrid"></div>
+  <div class="badges-section" id="badgesSection"></div>
+  <div class="history-section" id="historySection"></div>
+  <div class="btn-row">
+    <button class="btn-primary" id="btnRematch">Rematch</button>
+    <button class="btn-ghost" id="btnNewGame">New Game</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io({
+  transports: ['polling', 'websocket'],
+  upgrade: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
+  reconnectionDelayMax: 3000,
+  timeout: 20000,
+  forceNew: false,
+});
+let myPlayerNumber = null, myName = '', gameStartTime = null, timerInterval = null;
+let currentArticleTitle = '', myClicks = 0, myPath = [], oppPath = [];
+let myStartTitle = '', oppStartTitle = '', targetTitle = '';
+let selectedMode = 'classic', activeGameMode = 'classic', currentModifier = null;
+let oppName = 'Opponent', currentRoomCode = null, lastGoodTitle = null;
+
+const HIGHWAYS = ['United States','United Kingdom','England','Europe','France','Germany','World War II','English language','Latin','New York City','India','China','London','Wikipedia','Animal','Science','Africa','Australia','Canada','Japan'];
+const MODIFIERS = [
+  { id: 'clear', name: 'Clear', desc: 'No modifier active' },
+  { id: 'no-highways', name: 'No Highways', desc: 'Common shortcut articles are blocked' },
+  { id: 'blackout', name: 'Blackout', desc: '20% of links are disabled' },
+  { id: 'double-stakes', name: 'Double Stakes', desc: 'This click costs 2x' },
+  { id: 'roulette', name: 'Roulette', desc: '15% chance of random redirect' },
+];
+const MODE_DESCS = {
+  'classic': 'Race to the target article. Pure skill.',
+  'fog-of-war': "Opponent's position and clicks are hidden.",
+  'no-highways': 'Common shortcut articles (USA, England, etc.) are blocked on every page.',
+  'blackout': '20% of links are randomly disabled on every page.',
+  'double-stakes': 'Every click costs 2x. Choose wisely.',
+  'roulette': '15% chance each click redirects to a random article.',
+  'random-modifiers': 'A random modifier activates on every page navigation.',
+};
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMode = btn.dataset.mode;
+    document.getElementById('modeDesc').textContent = MODE_DESCS[selectedMode];
+  });
+});
+
+document.getElementById('btnCreate').addEventListener('click', () => {
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) { document.getElementById('lobbyError').textContent = 'Enter your name first'; return; }
+  myName = name;
+  socket.emit('create-room', { playerName: name, gameMode: selectedMode }, (res) => {
+    if (res.error) { document.getElementById('lobbyError').textContent = res.error; return; }
+    myPlayerNumber = res.playerNumber; activeGameMode = res.gameMode; currentRoomCode = res.code;
+    document.getElementById('roomCodeDisplay').textContent = res.code;
+    document.getElementById('waitingMode').textContent = activeGameMode.replace(/-/g, ' ').toUpperCase();
+    showScreen('waiting');
+  });
+});
+
+document.getElementById('btnJoin').addEventListener('click', () => {
+  const name = document.getElementById('playerName').value.trim();
+  const code = document.getElementById('roomCodeInput').value.trim();
+  if (!name) { document.getElementById('lobbyError').textContent = 'Enter your name first'; return; }
+  if (!code) { document.getElementById('lobbyError').textContent = 'Enter a room code'; return; }
+  myName = name;
+  socket.emit('join-room', { code, playerName: name }, (res) => {
+    if (res.error) { document.getElementById('lobbyError').textContent = res.error; return; }
+    myPlayerNumber = res.playerNumber; activeGameMode = res.gameMode; currentRoomCode = res.code;
+    document.getElementById('roomCodeDisplay').textContent = res.code;
+    document.getElementById('waitingMode').textContent = activeGameMode.replace(/-/g, ' ').toUpperCase();
+    showScreen('waiting');
+  });
+});
+
+socket.on('room-update', (data) => {
+  const list = document.getElementById('playersList');
+  list.innerHTML = data.players.map(p => `<div class="player-card ${p.ready?'ready':''}"><div class="name">${escapeHtml(p.name)}</div><div class="status">${p.ready?'Ready':'Not ready'}</div></div>`).join('');
+  if (data.gameMode) { activeGameMode = data.gameMode; document.getElementById('waitingMode').textContent = activeGameMode.replace(/-/g,' ').toUpperCase(); }
+  const btn = document.getElementById('btnReady');
+  if (data.players.length === 2) { btn.disabled = false; btn.textContent = data.rematch ? 'Ready for Rematch' : 'Ready'; }
+  if (data.rematch && data.players.length === 2) showScreen('waiting');
+});
+
+socket.on('mode-changed', (mode) => { activeGameMode = mode; document.getElementById('waitingMode').textContent = mode.replace(/-/g,' ').toUpperCase(); });
+
+document.getElementById('btnReady').addEventListener('click', () => {
+  socket.emit('player-ready');
+  document.getElementById('btnReady').disabled = true;
+  document.getElementById('btnReady').textContent = 'Waiting...';
+});
+
+socket.on('game-loading', () => {
+  document.getElementById('articleContent').innerHTML = '<div class="loading-article"><div class="spinner"></div>Picking random articles...</div>';
+});
+
+function renderBallStick() {
+  const list = document.getElementById('ballStickList');
+  const all = [myStartTitle, ...myPath];
+  const normalizedTarget = targetTitle.replace(/_/g, ' ').toLowerCase();
+  let html = '';
+  for (let i = 0; i < all.length; i++) {
+    const title = all[i], display = title.replace(/_/g, ' ');
+    const isStart = i === 0, isCurrent = i === all.length - 1;
+    const isTarget = display.toLowerCase() === normalizedTarget;
+    let cls = 'bs-node';
+    if (isTarget) cls += ' target'; else if (isCurrent) cls += ' current'; else if (isStart) cls += ' start';
+    const clickLabel = isStart ? '' : `<span class="bs-click-num">#${i}</span>`;
+    const showStick = i < all.length - 1;
+    html += `<li class="${cls}"><div class="bs-spine"><div class="bs-dot"></div>${showStick?'<div class="bs-stick"></div>':''}</div><div class="bs-label">${escapeHtml(display)}${clickLabel}</div></li>`;
+  }
+  if (all[all.length-1].replace(/_/g,' ').toLowerCase() !== normalizedTarget && targetTitle) {
+    html += `<li class="bs-node target"><div class="bs-spine"><div class="bs-stick" style="height:14px;background:none;border-left:1.5px dashed var(--rule)"></div><div class="bs-dot"></div></div><div class="bs-label" style="padding-top:14px">${escapeHtml(targetTitle.replace(/_/g,' '))}</div></li>`;
+  }
+  list.innerHTML = html;
+  document.getElementById('pathSidebarScroll').scrollTop = document.getElementById('pathSidebarScroll').scrollHeight;
+}
+
+function getActiveModifier() {
+  if (activeGameMode === 'random-modifiers') {
+    const w = [35,20,20,15,10], tot = w.reduce((a,b)=>a+b,0);
+    let r = Math.random()*tot;
+    for (let i=0;i<MODIFIERS.length;i++) { r-=w[i]; if(r<=0) return MODIFIERS[i]; }
+    return MODIFIERS[0];
+  }
+  if (activeGameMode === 'no-highways') return MODIFIERS[1];
+  if (activeGameMode === 'blackout') return MODIFIERS[2];
+  if (activeGameMode === 'double-stakes') return MODIFIERS[3];
+  if (activeGameMode === 'roulette') return MODIFIERS[4];
+  return null;
+}
+
+function showModOverlay(mod) {
+  if (!mod || mod.id === 'clear') return;
+  const overlay = document.getElementById('modOverlay'), backdrop = document.getElementById('modBackdrop');
+  document.getElementById('modName').textContent = mod.name;
+  document.getElementById('modDesc').textContent = mod.desc;
+  overlay.classList.add('visible'); backdrop.classList.add('visible');
+  setTimeout(() => { overlay.classList.remove('visible'); backdrop.classList.remove('visible'); }, 2000);
+}
+
+function applyBlackout() {
+  const links = document.querySelectorAll('#articleContent a[data-wiki-title]');
+  const count = Math.floor(links.length * 0.2), indices = new Set();
+  while (indices.size < count && indices.size < links.length) indices.add(Math.floor(Math.random()*links.length));
+  indices.forEach(i => links[i].classList.add('blocked-link'));
+}
+
+function applyNoHighways() {
+  document.querySelectorAll('#articleContent a[data-wiki-title]').forEach(a => {
+    if (HIGHWAYS.includes(a.dataset.wikiTitle.replace(/_/g,' '))) a.classList.add('blocked-link');
+  });
+}
+
+socket.on('game-start', (data) => {
+  showScreen('game');
+  myClicks = 0; myPath = []; oppPath = []; currentModifier = null; lastGoodTitle = null;
+  gameStartTime = Date.now();
+  activeGameMode = data.gameMode || activeGameMode;
+  document.getElementById('deadEndBar').style.display = 'none';
+  const myStart = data.starts[myPlayerNumber], oppStart = data.starts[myPlayerNumber===0?1:0];
+  myStartTitle = myStart.title; oppStartTitle = oppStart.title; lastGoodTitle = myStart.title;
+  const pCards = document.querySelectorAll('#playersList .name');
+  oppName = pCards[myPlayerNumber===0?1:0]?.textContent || 'Opponent';
+  document.getElementById('hudYouName').textContent = myName;
+  document.getElementById('hudOppName').textContent = oppName;
+  document.getElementById('hudYouClicks').textContent = '0';
+  document.getElementById('hudOppClicks').textContent = '0';
+  const t = document.createElement('div'); t.innerHTML = data.target.displayTitle; targetTitle = t.textContent;
+  document.getElementById('hudTarget').textContent = targetTitle;
+  document.getElementById('hudTargetDesc').textContent = data.target.description || '';
+  const oppHud = document.getElementById('oppHud');
+  if (activeGameMode === 'fog-of-war') {
+    oppHud.classList.add('fog');
+    document.getElementById('hudOppName').textContent = '???';
+    document.getElementById('hudOppClicks').textContent = '?';
+    document.getElementById('oppCurrentLabel').textContent = '';
+  } else {
+    oppHud.classList.remove('fog');
+    document.getElementById('oppCurrentLabel').textContent = `Opponent: ${oppStart.title.replace(/_/g,' ')}`;
+  }
+  clearInterval(timerInterval); timerInterval = setInterval(updateTimer, 1000); updateTimer();
+  renderBallStick(); loadArticle(myStart.title, true);
+});
+
+function updateTimer() {
+  if (!gameStartTime) return;
+  const s = Math.floor((Date.now()-gameStartTime)/1000);
+  document.getElementById('hudTimer').textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+async function loadArticle(title, isFirst) {
+  currentArticleTitle = title;
+  document.getElementById('articleTitle').textContent = title.replace(/_/g,' ');
+  document.getElementById('articleContent').innerHTML = '<div class="loading-article"><div class="spinner"></div>Loading article...</div>';
+  document.getElementById('deadEndBar').style.display = 'none';
+  try {
+    const res = await fetch(`/api/article?title=${encodeURIComponent(title)}`);
+    const data = await res.json();
+    if (data.redirectedTo) { currentArticleTitle = data.redirectedTo; document.getElementById('articleTitle').textContent = data.redirectedTo.replace(/_/g,' '); }
+    if (data.error) { document.getElementById('articleContent').innerHTML = '<div class="loading-article">Could not load article. Try another link.</div>'; showDeadEnd(); return; }
+    renderArticle(data.html);
+    const wikiLinks = document.querySelectorAll('#articleContent a[data-wiki-title]');
+    if (wikiLinks.length < 3 && !isFirst) showDeadEnd(); else lastGoodTitle = title;
+    currentModifier = getActiveModifier();
+    if (currentModifier) {
+      if (activeGameMode === 'random-modifiers') showModOverlay(currentModifier);
+      if (currentModifier.id === 'blackout') applyBlackout();
+      if (currentModifier.id === 'no-highways') applyNoHighways();
+    }
+  } catch (e) {
+    document.getElementById('articleContent').innerHTML = '<div class="loading-article">Network error. Check your connection.</div>';
+    showDeadEnd();
+  }
+}
+
+function showDeadEnd() { if (lastGoodTitle && lastGoodTitle !== currentArticleTitle) document.getElementById('deadEndBar').style.display = 'flex'; }
+document.getElementById('deadEndBack').addEventListener('click', () => { if (lastGoodTitle) { document.getElementById('deadEndBar').style.display='none'; loadArticle(lastGoodTitle, false); } });
+
+function buildToc(container) {
+  const headings = container.querySelectorAll('h2, h3, h4');
+  if (headings.length < 3) return;
+  const toc = document.createElement('div'); toc.className = 'wiki-toc';
+  const title = document.createElement('div'); title.className = 'wiki-toc-title'; title.textContent = 'Contents';
+  title.addEventListener('click', () => toc.classList.toggle('collapsed'));
+  toc.appendChild(title);
+  const list = document.createElement('ol'); list.className = 'wiki-toc-list';
+  let num = 0;
+  headings.forEach(h => {
+    if (h.closest('.infobox, .navbox, .sidebar, .mbox-small, figure')) return;
+    const text = h.textContent.replace(/\[edit\]/g,'').trim();
+    if (!text) return;
+    num++;
+    h.id = 'toc-heading-' + num;
+    const li = document.createElement('li'); li.className = 'toc-' + h.tagName.toLowerCase();
+    const a = document.createElement('a');
+    a.textContent = (h.tagName === 'H2' ? num + '. ' : '') + text;
+    a.addEventListener('click', e => { e.preventDefault(); h.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    li.appendChild(a); list.appendChild(li);
+  });
+  if (num >= 3) {
+    toc.appendChild(list);
+    const fh = container.querySelector('h2, h3');
+    if (fh) fh.parentNode.insertBefore(toc, fh); else container.insertBefore(toc, container.firstChild);
+  }
+}
+
+function renderArticle(html) {
+  const container = document.getElementById('articleContent');
+  container.innerHTML = html;
+  container.querySelectorAll('link, style, script, base').forEach(el => el.remove());
+  container.querySelectorAll('a').forEach(a => {
+    const href = a.getAttribute('href');
+    if (!href) { a.removeAttribute('href'); return; }
+    let wikiTitle = null;
+    if (href.startsWith('./')) wikiTitle = decodeURIComponent(href.replace('./','').split('#')[0]);
+    else if (href.startsWith('../')) wikiTitle = decodeURIComponent(href.replace(/^(\.\.\/)+/,'').split('#')[0]);
+    else { const m = href.match(/\/wiki\/([^#?]+)/); if (m) wikiTitle = decodeURIComponent(m[1]); }
+    if (wikiTitle && (!wikiTitle.includes(':') || wikiTitle.startsWith('Category:'))) {
+      a.removeAttribute('href'); a.setAttribute('data-wiki-title', wikiTitle); a.style.cursor = 'pointer';
+      a.addEventListener('click', e => { e.preventDefault(); if (!a.classList.contains('blocked-link')) navigateTo(wikiTitle); });
+      return;
+    }
+    if (href.startsWith('#') || href.startsWith('//') || href.startsWith('http')) {
+      a.removeAttribute('href'); a.style.color = '#a2a9b1'; a.style.cursor = 'default';
+    }
+  });
+  buildToc(container);
+  container.scrollTop = 0;
+}
+
+async function navigateTo(title) {
+  let isDoubleStakes = false;
+  if (currentModifier && currentModifier.id === 'roulette' && Math.random() < 0.15) {
+    try { const r = await fetch('/api/random'); const d = await r.json(); title = d.title; showModOverlay({id:'roulette-triggered',name:'Redirected!',desc:`Roulette sent you to ${title.replace(/_/g,' ')}`}); } catch(e){}
+  }
+  if (currentModifier && currentModifier.id === 'double-stakes') isDoubleStakes = true;
+  myPath.push(title); myClicks += isDoubleStakes ? 2 : 1;
+  document.getElementById('hudYouClicks').textContent = myClicks;
+  renderBallStick();
+  socket.emit('navigate', isDoubleStakes ? { title, doubleStakes: true } : title);
+  loadArticle(title, false);
+}
+
+socket.on('player-navigated', (data) => {
+  if (data.player !== myPlayerNumber) {
+    if (activeGameMode === 'fog-of-war') return;
+    oppPath.push(data.title);
+    document.getElementById('hudOppClicks').textContent = data.clicks;
+    document.getElementById('oppCurrentLabel').textContent = `Opponent: ${data.title.replace(/_/g,' ')}`;
+  }
+});
+
+socket.on('game-over', (data) => {
+  clearInterval(timerInterval);
+  const iWon = data.winner === myPlayerNumber;
+  const el = document.getElementById('resultsTitle');
+  el.textContent = iWon ? 'Victory' : 'Defeat';
+  el.className = 'results-title ' + (iWon ? 'won' : 'lost');
+  const s = Math.floor(data.elapsed/1000), timeStr = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const myIdx = myPlayerNumber, oppIdx = myPlayerNumber===0?1:0;
+  const myScore = iWon ? data.winnerScore : data.loserScore;
+  const oppScore2 = iWon ? data.loserScore : data.winnerScore;
+  function fmt(n) { return n.toLocaleString(); }
+  function card(label, sc, isW) {
+    const cm = sc.comebackMultiplier > 1 ? ` (${sc.comebackMultiplier.toFixed(1)}x)` : '';
+    return `<div class="result-card ${isW?'winner':''}"><h3>${escapeHtml(label)} ${isW?'— Winner':''}</h3>
+      <div class="score-row"><span class="label">Clicks (${sc.clicks})</span><span class="value">${fmt(sc.clickScore)}</span></div>
+      <div class="score-row"><span class="label">Speed (${timeStr})</span><span class="value">${fmt(sc.timeScore)}</span></div>
+      <div class="score-row"><span class="label">Win Bonus</span><span class="value">${fmt(sc.winBonus)}</span></div>
+      ${sc.comebackMultiplier>1?`<div class="score-row"><span class="label">Comeback${cm}</span><span class="value">applied</span></div>`:''}
+      ${sc.streakBonus>0?`<div class="score-row"><span class="label">Streak Breaker</span><span class="value">+${fmt(sc.streakBonus)}</span></div>`:''}
+      <div class="score-row score-total"><span class="label">Round Total</span><span class="value">${fmt(sc.total)}</span></div></div>`;
+  }
+  document.getElementById('resultsGrid').innerHTML = card(myName,myScore,iWon) + card(oppName,oppScore2,!iWon);
+  document.getElementById('matchScoresDisplay').innerHTML = `Match Score &nbsp; <span>${fmt(data.matchScores[myIdx])}</span> &mdash; <span>${fmt(data.matchScores[oppIdx])}</span>`;
+  const bEl = document.getElementById('badgesSection');
+  if (data.badges && data.badges.length > 0) {
+    bEl.innerHTML = `<h3>Accolades</h3><div class="badges-row">${data.badges.map((b,i) => {
+      const who = b.player===-1?'Both':(b.player===myIdx?myName:oppName);
+      return `<div class="badge" style="animation-delay:${i*0.1}s"><div class="badge-name">${escapeHtml(b.name)}</div><div class="badge-desc">${escapeHtml(b.desc)}</div><div class="badge-player">${escapeHtml(who)}</div></div>`;
+    }).join('')}</div>`;
+  } else bEl.innerHTML = '';
+  function fmtPath(h) { return h.length?h.map((t,i)=>{const d=t.replace(/_/g,' ');return i===h.length-1?`<span class="target-hit">${escapeHtml(d)}</span>`:escapeHtml(d);}).join('<span class="arrow"> → </span>'):'-'; }
+  document.getElementById('historySection').innerHTML = `<h3>Your Path</h3><div class="history-path">${fmtPath(data.history[myIdx])}</div><h3 style="margin-top:14px">Opponent's Path</h3><div class="history-path">${fmtPath(data.history[oppIdx])}</div>`;
+  showScreen('results');
+});
+
+document.getElementById('btnRematch').addEventListener('click', () => { socket.emit('request-rematch'); document.getElementById('btnRematch').disabled=true; document.getElementById('btnRematch').textContent='Waiting...'; });
+document.getElementById('btnNewGame').addEventListener('click', () => window.location.reload());
+
+socket.on('disconnect', () => document.getElementById('reconnectBanner').classList.add('visible'));
+socket.on('connect', () => {
+  const b = document.getElementById('reconnectBanner');
+  if (b.classList.contains('visible')) {
+    b.classList.remove('visible');
+    if (currentRoomCode && myName) {
+      socket.emit('rejoin-room', { code: currentRoomCode, playerName: myName }, res => {
+        if (res.error) { alert('Could not rejoin the game. The room may have closed.'); window.location.reload(); }
+      });
+    }
+  }
+});
+socket.on('player-temporarily-disconnected', d => { if (d.player !== myPlayerNumber) document.getElementById('oppCurrentLabel').textContent = 'Opponent disconnected — waiting...'; });
+socket.on('player-reconnected', d => { if (d.player !== myPlayerNumber) document.getElementById('oppCurrentLabel').textContent = 'Opponent reconnected'; });
+socket.on('player-disconnected', () => { clearInterval(timerInterval); alert('Your opponent disconnected.'); window.location.reload(); });
+socket.on('game-error', msg => alert(msg));
+</script>
+</body>
+</html>
